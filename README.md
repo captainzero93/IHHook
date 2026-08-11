@@ -1,5 +1,5 @@
 # IHHook
-CHversion: ! BETA ! Local texture override build 
+Version r24.CHoom ! BETA ! Local texture override build 
 Added loose FTEX/FTEXS texture replacement support.
 Uses a QAR shadow overlay so replacement textures can be loaded without changing the original game archives.
 Replacement files can be larger than the originals; unsupported/oversized replacements are skipped and logged instead of being written into the archive.
