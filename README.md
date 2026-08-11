@@ -90,6 +90,7 @@ RawInput keyboard processing and blocking (proof of concept)
 See IHHHook.h for some comments about the project.
 
 ## Thanks
+kapuragu for his awesome fork - from Choom 
 zip for making me smooth out the release process, sorry about taking so long.
 sai for mentioning what he had done with ghidra which helped me get past a few hurdles to start finding MGSVs lua functions.  
 emoose for CityHook which provided a base to start IHHook from.
