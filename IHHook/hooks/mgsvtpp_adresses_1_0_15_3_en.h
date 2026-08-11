@@ -22,7 +22,6 @@ namespace IHHook {
 		{"FoxBlockLoad", 0x143151e80},//int * fox::Block::Load(void *thisPtr,int *errorCode,ulonglong *pathID,uint param_4)
 		//{"BlockMemoryAllocTail", 0x1400dbb30},
 		//{"BlockMemoryAllocHeap", 0x143261bf0},
-		//{"GetCurrentBlockMemory", 0x14328e410},
 
 		{"ff_stringid_hash_n", 0x14c1bd730},//ff_stringid_hash_n
 		{"FoxStrHash32", 0x142ece7f0},//fox::FoxStrHash32

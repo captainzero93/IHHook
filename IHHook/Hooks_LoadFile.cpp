@@ -6,6 +6,7 @@
 #include "MinHook/MinHook.h"
 #include "HookMacros.h"
 #include "hooks/mgsvtpp_func_typedefs.h"
+#include "Hooks_TextureOverride.h"
 
 namespace IHHook {
 	extern std::shared_ptr<spdlog::logger> luaLog;
@@ -28,6 +29,12 @@ namespace IHHook {
 		}*/
 		//tex LoadFile Actual, the other LoadFile* functions call this, so it's the only one I'm logging at the moment
 		void UpdateLocalPathStringHook(PathCode64 filePath64, PathCode64 filePath64_01) {
+			// Texture-override manifests are indexed by the same PathCode64 values seen here.
+			// Phase 1 only reports matching container loads; no game memory is modified yet.
+			Hooks_TextureOverride::NotifyPath(filePath64);
+			if (filePath64_01 != filePath64)
+				Hooks_TextureOverride::NotifyPath(filePath64_01);
+
 			if (config.logFileLoad) {
 				log->info(filePath64);
 				log->info(filePath64_01);
@@ -42,11 +49,15 @@ namespace IHHook {
 			if (config.logFileLoad) {//DEBUGNOW
 				log = spdlog::basic_logger_st("loadfile", logName);
 				log->set_pattern("%v");//tex raw logging
-					
-				CREATE_HOOK(UpdateLocalPathString)
-				CREATE_HOOK(foxPathPath)
+			}
 
-				ENABLEHOOK(UpdateLocalPathString)
+			// UpdateLocalPathString must be available even when raw load-file logging is off:
+			// IHTextureOverride uses it as the lightweight PathCode64 observation point.
+			CREATE_HOOK(UpdateLocalPathString)
+			ENABLEHOOK(UpdateLocalPathString)
+
+			if (config.logFileLoad) {
+				CREATE_HOOK(foxPathPath)
 				//ENABLEHOOK(foxPathPath)
 			}
 

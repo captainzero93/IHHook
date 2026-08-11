@@ -207,6 +207,9 @@
     <ClInclude Include="Hooks_LoadFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Hooks_TextureOverride.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="hooks\mgsvtpp_func_typedefs_manual.h">
       <Filter>Header Files\hooks</Filter>
     </ClInclude>
@@ -360,6 +363,9 @@
       <Filter>Source Files\hooks</Filter>
     </ClCompile>
     <ClCompile Include="Hooks_LoadFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Hooks_TextureOverride.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Hooks_Character.cpp">

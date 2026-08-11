@@ -179,6 +179,8 @@ namespace IHHook {
 		luaopen_package = (luaopen_packageFunc*)addressSet["luaopen_package"];
 		luaL_openlibs = (luaL_openlibsFunc*)addressSet["luaL_openlibs"];
 		FoxBlockProcess = (FoxBlockProcessFunc*)addressSet["FoxBlockProcess"];
+		BlockMemoryAllocTail = (BlockMemoryAllocTailFunc*)addressSet["BlockMemoryAllocTail"];
+		BlockMemoryAllocHeap = (BlockMemoryAllocHeapFunc*)addressSet["BlockMemoryAllocHeap"];
 		GetChangeLocationMenuParameterByLocationId = (GetChangeLocationMenuParameterByLocationIdFunc*)addressSet["GetChangeLocationMenuParameterByLocationId"];
 		GetMbFreeChangeLocationMenuParameter = (GetMbFreeChangeLocationMenuParameterFunc*)addressSet["GetMbFreeChangeLocationMenuParameter"];
 		GetPhotoAdditionalTextLangId = (GetPhotoAdditionalTextLangIdFunc*)addressSet["GetPhotoAdditionalTextLangId"];

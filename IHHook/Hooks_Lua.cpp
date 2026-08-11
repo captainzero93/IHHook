@@ -22,6 +22,7 @@
 #include "Hooks_Character.h"//CreateLibs //TODO: don't like this in here
 #include "Hooks_Buddy.h" //ZIP: For buddies
 #include "Hooks_Vehicle.h" //ZIP: For vehicles
+#include "Hooks_TextureOverride.h" // runtime FTEX/PFTXS override manifests
 //#include "Hooks_FoxString.h" //ZIP: FoxString hook
 
 #include <string>
@@ -315,6 +316,7 @@ namespace IHHook {
 		//IN/SIDE: IHHook::BaseAddr
 		void CreateHooks() {
 			spdlog::debug(__func__);
+			spdlog::info("IHTextureOverride BUILD: QAR_SHADOW_OVERLAY_NO_TLS_20260810_1248");
 			
 			if (addressSet["luaL_openlibs"] == NULL
 				|| addressSet["lua_newstate"] == NULL
@@ -354,8 +356,12 @@ namespace IHHook {
 
 				CREATE_HOOK(FoxBlockLoad)
 				ENABLEHOOK(FoxBlockLoad)
-				//CREATE_HOOK(FoxBlockProcess)
-				//ENABLEHOOK(FoxBlockProcess)
+				// IHTextureOverride phase 2 needs a safe observation point after block IO.
+				// The old FoxBlockProcessHook debug body did unsafe raw field reads; the
+				// replacement below only asks the texture override module to inspect
+				// blocks that FoxBlockLoad has already associated with a registered PFTXS.
+				CREATE_HOOK(FoxBlockProcess)
+				ENABLEHOOK(FoxBlockProcess)
 				
 				CreateHooksForTppMod();
 			}//if name##Addr != NULL
@@ -363,10 +369,12 @@ namespace IHHook {
 
 		//TODO: document/make more discoverable
 		void CreateLibs(lua_State* L) {
+			spdlog::info("IHTextureOverride BUILD ACTIVE: QAR_SHADOW_OVERLAY_NO_TLS_20260810_1248");
 			LuaIHH::luaopen_ihh(L);
 			Hooks_Character::CreateLibs(L);
 			Hooks_Buddy::CreateLibs(L); //ZIP: For buddies
 			Hooks_Vehicle::CreateLibs(L); //ZIP: For vehicles
+			Hooks_TextureOverride::CreateLibs(L);
 			//Hooks_FoxString::CreateLibs(L); //ZIP: FoxString hook
 		}//CreateLibs
 
@@ -565,51 +573,85 @@ namespace IHHook {
 		std::map<void*, uint32_t> processCount{};
 		std::map<void*, std::string> blockNames{};
 		double FoxBlockProcessHook(void* Block, void* TaskContext, void* BlockProcessState) {
-			//this keeps crashing
-			DWORD tid = GetCurrentThreadId();
-			if (processCount.find(Block)!=processCount.end()) {
-				processCount[Block]++;
-			}
-			else {
-				processCount[Block] = 0;
-			}
-			if (processCount[Block] % 500 == 0) {
-				auto blockName = blockNames[Block];
-				uint32_t mem1 = *(int*)((char*)Block + 0x60);
-				int32_t mem2 = *(int*)((char*)Block + 0x18);
-				int32_t mem3 = *(int*)((char*)Block + 0x40);
-				int32_t mem4 = *(int*)((char*)Block + 0x10);
-				uint32_t mem5 = *(int*)((char*)Block + 0x148);
-				spdlog::info("tid {}, process {} ({}), mem {} {} {} {} {}", tid, blockName, Block, mem1, mem2, mem3, mem4, mem5);
+			// Do NOT call unverified TLS helpers here. Track only registered target
+			// processing scopes, and let the allocator hook observe synchronous allocations.
+			const bool scopePushed =
+				Hooks_TextureOverride::EnterBlockProcess(Block, TaskContext);
+
+			double result = FoxBlockProcess(Block, TaskContext, BlockProcessState);
+
+			if (scopePushed) {
+				Hooks_TextureOverride::ProcessBlock(Block);
+				Hooks_TextureOverride::LeaveBlockProcess();
 			}
 
-			//        if ((uint)((*(int *)(param_1 + 0x60) - *(int *)(param_1 + 0x18)) + *(int *)(param_1 + 0x40) +
-			//                   *(int *)(param_1 + 0x10)) <= *(uint *)(param_1 + 0x148)) {
-
-			return FoxBlockProcess(Block, TaskContext, BlockProcessState);
+			return result;
 		}
+
+		void* BlockMemoryAllocTailHook(void* memBlock, uint64_t sizeInBytes, uint64_t alignment, uint32_t categoryTag) {
+			void* allocation = BlockMemoryAllocTail(memBlock, sizeInBytes, alignment, categoryTag);
+			Hooks_TextureOverride::NotifyBlockAllocation(
+				memBlock, allocation, sizeInBytes, alignment, categoryTag);
+			return allocation;
+		}
+
+		void* BlockMemoryAllocHeapHook(uint64_t sizeInBytes, uint64_t alignment, uint32_t categoryTag) {
+			void* allocation = BlockMemoryAllocHeap(sizeInBytes, alignment, categoryTag);
+			// Heap allocations have no BlockMemory receiver. The texture override
+			// layer only accepts them while this thread is inside a registered target
+			// Load/Process scope, so unrelated heap traffic is ignored.
+			Hooks_TextureOverride::NotifyBlockAllocation(
+				nullptr, allocation, sizeInBytes, alignment, categoryTag);
+			return allocation;
+		}
+
 		int* FoxBlockLoadHook(void* thisPtr, int* errorCode, uint64_t* pathID, uint32_t count) {
+			// Associate the block with any registered PFTXS before entering the real
+			// Fox load. Once registered, EnterBlockProcess also acts as a generic
+			// per-thread target scope: target block => block pointer, unrelated nested
+			// block => nullptr. This lets BlockMemoryAllocTail allocations made inside
+			// FoxBlockLoad be attributed without TLS or pointer guessing.
+			Hooks_TextureOverride::NotifyBlockLoad(thisPtr, pathID, count);
+			const bool loadScopePushed =
+				Hooks_TextureOverride::EnterBlockProcess(thisPtr, nullptr);
+
 			DWORD tid = GetCurrentThreadId();
 			auto pp = pathID;
 			auto blockName = blockNames[thisPtr];
+
 			if (pathDict.empty()) {
-				spdlog::info("tid 1 {}, block {} ({}), loading {:x} ({:d})", tid, blockName, thisPtr, *pp, count);
-				return FoxBlockLoad(thisPtr, errorCode, pathID, count);
+				spdlog::info("tid 1 {}, block {} ({}), loading {:x} ({:d})",
+					tid, blockName, thisPtr, *pp, count);
+			}
+			else {
+				for (uint32_t i = 0; i < count; i++) {
+					auto name = pathDict[(ulonglong)*pp & 0x3FFFFFFFFFFFF];
+					if (name.empty()) {
+						spdlog::info(
+							"tid 2 {}, block {} ({}), loading {:x} ({:d}/{:d})",
+							tid, blockName, thisPtr, *pp, i + 1, count);
+					}
+					else {
+						spdlog::info(
+							"tid 3 {}, block {} ({}), loading {} ({:d}/{})",
+							tid, blockName, thisPtr, name, i + 1, count);
+					}
+					pp++;
+				}
 			}
 
-			for (int i = 0; i < count; i++) {
-				auto name = pathDict[(ulonglong)*pathID & 0x3FFFFFFFFFFFF];
-				if (name.empty()) {
-					spdlog::info("tid 2 {}, block {} ({}), loading {:x} ({:d}/{:d})", tid, blockName, thisPtr, *pp, i + 1, count);
-				}
-				else {
-					spdlog::info("tid 3 {}, block {} ({}), loading {} ({:d}/{})", tid, blockName, thisPtr, name, i + 1, count);
-				}
-				pp++;
+			int* result = FoxBlockLoad(thisPtr, errorCode, pathID, count);
+
+			if (loadScopePushed) {
+				// If Load synchronously allocated and filled the raw PFTXS, try it now.
+				// ProcessBlock is a no-op for unrelated blocks.
+				Hooks_TextureOverride::ProcessBlock(thisPtr);
+				Hooks_TextureOverride::LeaveBlockProcess();
 			}
-			auto q = FoxBlockLoad(thisPtr, errorCode, pathID, count);
-			return q;
+
+			return result;
 		}
+
 		bool open_io_override = false;
 		void CreateHooksForTppMod()
 		{

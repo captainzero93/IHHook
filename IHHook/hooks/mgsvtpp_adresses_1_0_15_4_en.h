@@ -20,9 +20,8 @@ namespace IHHook {
 		//{"FoxGenerateUniqueName", 0x1400e0210},
 		//{"FoxBlock", 0x143145960},
 		{"FoxBlockLoad", 0x14006e040},//int * fox::Block::Load(void *thisPtr,int *errorCode,ulonglong *pathID,uint param_4)
-		//{"BlockMemoryAllocTail", 0x1400dbb30},
-		//{"BlockMemoryAllocHeap", 0x143261bf0},
-		//{"GetCurrentBlockMemory", 0x14328e410},
+		//{"BlockMemoryAllocTail", 0x1400dbb30},//fox::BlockMemory allocation tail
+		//{"BlockMemoryAllocHeap", 0x143261bf0},//fox::impl::BlockMemory::AllocHeap
 
 		{"ff_stringid_hash_n", 0x141a09ac0},//ff_stringid_hash_n
 		{"FoxStrHash32", 0x1400234c0},//fox::FoxStrHash32

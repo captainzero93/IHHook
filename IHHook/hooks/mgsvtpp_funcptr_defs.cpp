@@ -176,6 +176,8 @@ luaopen_packageFunc* luaopen_package;
 luaL_openlibsFunc* luaL_openlibs;
 
 FoxBlockProcessFunc* FoxBlockProcess;
+BlockMemoryAllocTailFunc* BlockMemoryAllocTail;
+BlockMemoryAllocHeapFunc* BlockMemoryAllocHeap;
 GetChangeLocationMenuParameterByLocationIdFunc* GetChangeLocationMenuParameterByLocationId;
 GetMbFreeChangeLocationMenuParameterFunc* GetMbFreeChangeLocationMenuParameter;
 GetPhotoAdditionalTextLangIdFunc* GetPhotoAdditionalTextLangId;

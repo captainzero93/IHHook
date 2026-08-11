@@ -1,10 +1,11 @@
 # IHHook
-Local texture override build 
-Added loose FTEX/FTEXS texture replacement support.
-Uses a QAR shadow overlay so replacement textures can be loaded without changing the original game archives.
-Replacement files can be larger than the originals; unsupported/oversized replacements are skipped and logged instead of being written into the archive.
-Cleaned duplicated IHHook source/build folders and kept the newer 1.0.15.4 source with the QAR texture hook changes.
-Rebuilt the cleaned source and confirmed the texture replacement hook still works correctly on the current game build.
+Local texture override build - 2026-08-11
+Added runtime loose FTEX/FTEXS texture replacement.
+Texture replacement now uses a QAR shadow overlay instead of changing the archive on disk.
+Registered PFTXS files are rebuilt with the loose replacement textures and overlaid into normal QAR reads.
+Replacement data must fit inside the original PFTXS size. Oversized replacements are skipped and logged.
+Cleaned duplicated IHHook source and old release folders from the working source tree.
+Clean 1.0.15.4 source rebuilt successfully and texture replacement confirmed working.
 
 Version r24 - 2026-08-07 (see github for full changes)
 Added SnakeBite builds for Ultimate ASI Loader and plugin folder versions.
